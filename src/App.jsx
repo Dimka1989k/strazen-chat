@@ -1,35 +1,71 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { Route, Routes, useLocation, Navigate } from "react-router";
+import { useState, useEffect } from "react";
+import Login from "./components/Login/Login";
+import Header from "./components/Header/Header";
+
+import Home from "./components/Home/Phychic";
+import Footer from "./components/Footer/Footer";
+import Terms from "./components/Terms/Terms";
+import Balance from "./components/Balance/Balance";
+import Chat from "./components/Chat/Chat";
+
+function ProtectedRoute({ children, userProfile }) {
+  console.log("ProtectedRoute: userProfile =", userProfile);
+  return userProfile ? children : <Navigate to="/login" />;
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const location = useLocation();
+  const shouldShowFooter = location.pathname !== "/login" && location.pathname !== "/chat";
+
+  const [userProfile, setUserProfile] = useState(null);
+
+  useEffect(() => {
+    const storedProfile = localStorage.getItem("userProfile");
+    if (storedProfile) {
+      const profileData = JSON.parse(storedProfile);
+      setUserProfile(profileData);    
+      console.log("App: User Profile loaded from localStorage:", profileData);
+    }
+  }, []);
+
+  const handleLoginSuccess = (profileData) => {
+    setUserProfile(profileData);
+    localStorage.setItem("userProfile", JSON.stringify(profileData));
+   
+    console.log("App: User Profile on successful login:", profileData);
+  };
+
+  const handleLogout = () => {
+    setUserProfile(null);
+    localStorage.removeItem("userProfile");
+    localStorage.removeItem("accessToken");
+    console.log("App: User has logged out. localStorage cleared.");
+  };
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <Header userProfile={userProfile} onLogout={handleLogout} />
+      <Routes>
+        <Route path="/" element={<Home userProfile={userProfile} />} />
+        <Route
+          path="/login"
+          element={<Login onLoginSuccess={handleLoginSuccess} />}
+        />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/topup" element={<Balance />} />
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute userProfile={userProfile}>
+              <Chat />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+      {shouldShowFooter && <Footer />}
     </>
-  )
+  );
 }
 
-export default App
+export default App;
